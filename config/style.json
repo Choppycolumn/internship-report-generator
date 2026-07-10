@@ -1,0 +1,15 @@
+{
+  "font_size_pt": 10.5,
+  "heading_1_size_pt": 12.0,
+  "heading_2_size_pt": 11.0,
+  "heading_3_size_pt": 10.5,
+  "minimum_font_size_pt": 8.0,
+  "first_line_indent_em": 2.0,
+  "baseline_offset_mm": -0.6,
+  "heading_baseline_offset_mm": -0.5,
+  "page_number_size_pt": 8.0,
+  "caption_size_pt": 8.5,
+  "page_number_format": "{page}",
+  "default_stroke_width_pt": 0.5,
+  "debug_grid_mm": 10.0
+}

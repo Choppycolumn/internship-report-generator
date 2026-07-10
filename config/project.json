@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "project_name": "生产（专业）实习报告",
+  "physical_size_policy": "user_measurement_required",
+  "default_page_size": null,
+  "allow_pdf_media_box_as_physical_size": false,
+  "allow_image_dpi_as_physical_size": false
+}
+

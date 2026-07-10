@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=900, initial-scale=1">
+  <title>项目宣传图</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 900px; height: 1200px; overflow: hidden; }
+    body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #eaf0f2; }
+    .card { position: relative; width: 900px; height: 1200px; padding: 72px; overflow: hidden; display: none; }
+    .card.active { display: block; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 12px; padding: 10px 18px; border-radius: 999px; font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+    h1 { margin: 42px 0 26px; font-size: 86px; line-height: 1.08; letter-spacing: -4px; }
+    h2 { margin: 28px 0 18px; font-size: 54px; line-height: 1.18; }
+    p { margin: 0; font-size: 28px; line-height: 1.7; }
+    .chips { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 38px; }
+    .chip { padding: 13px 20px; border-radius: 14px; font-size: 24px; font-weight: 700; }
+    .footer { position: absolute; left: 72px; right: 72px; bottom: 54px; display: flex; justify-content: space-between; align-items: center; font-size: 20px; letter-spacing: 1px; }
+
+    #cover { color: #f7fbfa; background:
+      radial-gradient(circle at 80% 16%, rgba(127,226,207,.35), transparent 28%),
+      radial-gradient(circle at 12% 82%, rgba(71,136,255,.35), transparent 32%),
+      linear-gradient(145deg, rgba(5,20,28,.72), rgba(13,48,58,.88)),
+      url('../images/ai-cover-base.png') center/cover no-repeat,
+      #0d303a; }
+    #cover::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); background-size: 38px 38px; pointer-events: none; }
+    #cover > * { position: relative; z-index: 1; }
+    #cover .eyebrow { background: rgba(217,255,247,.14); border: 1px solid rgba(217,255,247,.45); }
+    #cover .accent { color: #80ead2; }
+    #cover .chip { background: rgba(248,255,253,.1); border: 1px solid rgba(248,255,253,.22); }
+    #cover .hero-number { margin-top: 72px; font-size: 170px; line-height: .9; font-weight: 900; color: rgba(128,234,210,.22); letter-spacing: -12px; }
+    #cover .footer { font-size: 17px; }
+    #cover .footer span:first-child { max-width: 260px; }
+    #cover .footer span:last-child { max-width: 430px; text-align: right; }
+
+    #workflow { color: #132b35; background: linear-gradient(165deg,#f4f9f7 0%,#e8f2ee 50%,#dce9ed 100%); }
+    #workflow .eyebrow { background: #d4eee7; color: #155c52; }
+    .flow { margin-top: 52px; display: grid; gap: 22px; }
+    .step { display: grid; grid-template-columns: 86px 1fr; gap: 24px; padding: 28px 30px; border-radius: 24px; background: rgba(255,255,255,.84); box-shadow: 0 16px 42px rgba(32,72,78,.09); }
+    .step b { display: grid; place-items: center; width: 68px; height: 68px; border-radius: 18px; background: #173f49; color: white; font-size: 34px; }
+    .step strong { display: block; font-size: 34px; margin-bottom: 5px; }
+    .step span { font-size: 23px; color: #557078; }
+    .guard { margin-top: 34px; padding: 26px 30px; border-radius: 22px; background: #173f49; color: #e9fffa; font-size: 24px; line-height: 1.7; }
+
+    #review { color: #142e36; background: linear-gradient(160deg,#edf4f2,#dfe9ed); }
+    #review .eyebrow { background: #173f49; color: white; }
+    .screen { margin-top: 34px; padding: 16px; border-radius: 26px; background: #172a32; box-shadow: 0 24px 60px rgba(13,39,48,.22); }
+    .screen img { display: block; width: 100%; height: 650px; object-fit: cover; object-position: top; border-radius: 16px; background: white; }
+    #review h2 { font-size: 46px; }
+    #review .sub { color: #4e6c75; font-size: 25px; }
+  </style>
+</head>
+<body>
+  <section id="cover" class="card">
+    <div class="eyebrow">PYTHON · PDF · 毫米坐标</div>
+    <h1>把实习报告册<br>做成<span class="accent">毫米级</span><br>套打系统</h1>
+    <p>照片、中文、图题自动分页，避开页眉、装订区与预印栏目。</p>
+    <div class="chips"><span class="chip">真实横线对齐</span><span class="chip">三类 PDF</span><span class="chip">人工事实审核</span></div>
+    <div class="hero-number">mm</div>
+    <div class="footer"><span>生产（专业）实习报告工具</span><span>约 5.6 SOL · 极高强度 · 两次重置</span></div>
+  </section>
+
+  <section id="workflow" class="card">
+    <div class="eyebrow">每天只做 3 步</div>
+    <h2>照片与文字，一张张对应检查</h2>
+    <div class="flow">
+      <div class="step"><b>1</b><div><strong>上传当天照片</strong><span>保留原图，自动纠正方向并提示清晰度。</span></div></div>
+      <div class="step"><b>2</b><div><strong>填写对应文字</strong><span>每张图都有图题、相关段落和事实边界。</span></div></div>
+      <div class="step"><b>3</b><div><strong>逐项人工确认</strong><span>确认后再进入排版，不把推测直接写成事实。</span></div></div>
+    </div>
+    <div class="guard">不猜 A4　·　不虚构型号　·　不覆盖预印内容<br>预览 PDF　·　套打 PDF　·　调试 PDF</div>
+    <div class="footer"><span>从每日材料到确定性排版</span><span>29 项测试通过</span></div>
+  </section>
+
+  <section id="review" class="card">
+    <div class="eyebrow">真实可运行界面</div>
+    <h2>每张照片，下方都有对应文字</h2>
+    <p class="sub">图题、相关段落、质量提示和确认状态在同一页完成。</p>
+    <div class="screen"><img src="../images/daily-review-ui.png" alt="每日图片与文字审核界面"></div>
+    <div class="footer"><span>数据只保存在本机项目目录</span><span>开源 · 可复现</span></div>
+  </section>
+
+  <script>
+    const card=new URLSearchParams(location.search).get('card')||'cover';
+    (document.getElementById(card)||document.getElementById('cover')).classList.add('active');
+  </script>
+</body>
+</html>

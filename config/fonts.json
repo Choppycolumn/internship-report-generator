@@ -1,0 +1,10 @@
+{
+  "preferred_family": "SimSun",
+  "candidate_paths": [
+    "C:/Windows/Fonts/simsun.ttc",
+    "C:/Windows/Fonts/msyh.ttc",
+    "C:/Windows/Fonts/simhei.ttf"
+  ],
+  "fallback_pdf_font": "STSong-Light"
+}
+

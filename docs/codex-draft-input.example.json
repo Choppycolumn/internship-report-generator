@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "date": "2026-07-11",
+  "title": "设备生产与检测流程学习",
+  "confirmed_facts": [
+    "参观了设备生产区域。",
+    "工作人员介绍了基本结构和检测流程。"
+  ],
+  "inferred_facts": [],
+  "pending_confirmation": [
+    "是否进入了具体装配工位需要确认。"
+  ],
+  "prohibited_claims": [
+    "独立完成设备调试"
+  ],
+  "word_count_target": 800,
+  "sections": [
+    {
+      "id": "heading_content",
+      "type": "heading",
+      "text": "一、当日实习内容",
+      "level": 1,
+      "basis": [],
+      "requires_confirmation": false
+    },
+    {
+      "id": "paragraph_content",
+      "type": "paragraph",
+      "text": "根据当日记录，参观了设备生产区域，并在工作人员介绍下了解了设备的基本结构和检测流程。",
+      "basis": [
+        "note:参观了设备生产区域。",
+        "note:工作人员介绍了基本结构和检测流程。"
+      ],
+      "requires_confirmation": false
+    }
+  ]
+}

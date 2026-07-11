@@ -274,6 +274,94 @@ class DailyReview(BaseModel):
     updated_at: str
 
 
+class DailyFactBundle(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    confirmed_facts: list[str] = Field(default_factory=list)
+    inferred_facts: list[str] = Field(default_factory=list)
+    pending_confirmation: list[str] = Field(default_factory=list)
+    prohibited_claims: list[str] = Field(default_factory=list)
+
+
+class DailyDraftSection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    type: Literal["heading", "paragraph", "image"]
+    text: str = ""
+    level: int | None = Field(default=None, ge=1, le=3)
+    path: str | None = None
+    caption: str = ""
+    basis: list[str] = Field(default_factory=list)
+    requires_confirmation: bool = False
+
+    @model_validator(mode="after")
+    def validate_section(self) -> "DailyDraftSection":
+        if self.type == "heading" and self.level is None:
+            raise ValueError("heading sections require a level")
+        if self.type == "image" and not self.path:
+            raise ValueError("image sections require a path")
+        return self
+
+
+class DuplicateFinding(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_section_id: str
+    other_date: str
+    other_section_id: str
+    score: float = Field(ge=0, le=1)
+    excerpt: str
+
+
+class DailyDraftMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    body_characters: int = Field(ge=0)
+    target_characters: int = Field(ge=1)
+    remaining_characters: int = Field(ge=0)
+    section_characters: dict[str, int] = Field(default_factory=dict)
+    max_similarity: float = Field(default=0.0, ge=0, le=1)
+    duplicate_findings: list[DuplicateFinding] = Field(default_factory=list)
+
+
+class DailyDraft(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: int = 1
+    version: int = Field(default=1, ge=1)
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    title: str
+    status: Literal["draft", "approved"] = "draft"
+    source_review_updated_at: str
+    facts: DailyFactBundle
+    word_count_target: int = Field(default=800, ge=100)
+    sections: list[DailyDraftSection] = Field(default_factory=list)
+    metrics: DailyDraftMetrics
+    content_warnings: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    content_hash: str = ""
+    created_at: str
+    updated_at: str
+    approved_at: str | None = None
+
+
+class CodexDailyDraftInput(BaseModel):
+    """Human/Codex-authored content before deterministic metrics and locking."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: int = 1
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    title: str
+    confirmed_facts: list[str] = Field(default_factory=list)
+    inferred_facts: list[str] = Field(default_factory=list)
+    pending_confirmation: list[str] = Field(default_factory=list)
+    prohibited_claims: list[str] = Field(default_factory=list)
+    word_count_target: int = Field(default=800, ge=100)
+    sections: list[DailyDraftSection] = Field(default_factory=list)
+
+
 class PaginatedDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

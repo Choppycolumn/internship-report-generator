@@ -65,6 +65,8 @@ start_daily_review.cmd
 .venv\Scripts\python launch_daily_review.py
 ```
 
+如果双击没有反应，可在项目目录运行 `start_daily_review.cmd` 查看错误提示。仓库通过 `.gitattributes` 强制该启动器使用 Windows CRLF 换行，并保持批处理外壳为 ASCII，避免 `cmd.exe` 因 UTF-8 中文和 LF 换行错误拆分命令。
+
 在页面中选择日期并上传多张照片，每张照片下方可填写图题和对应的生成文字，再逐项勾选确认。原图、处理图和审核结果保存在本机 `days/YYYY-MM-DD/`，不会自动上传。
 
 ## 不接外部模型 API 的 Codex 协作流程
@@ -142,7 +144,7 @@ start_daily_review.cmd
 .venv\Scripts\python -m pytest -q
 ```
 
-当前验收结果：36 项测试通过；三类第三阶段示例 PDF 页数和物理尺寸一致，正式版不含模板背景；第四阶段 HTTP 草稿与批准流程通过。
+当前验收结果：37 项测试通过；三类第三阶段示例 PDF 页数和物理尺寸一致，正式版不含模板背景；第四阶段 HTTP 草稿与批准流程通过。
 
 ## 当前限制
 

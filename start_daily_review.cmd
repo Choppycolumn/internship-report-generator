@@ -1,14 +1,21 @@
 @echo off
-chcp 65001 >nul
+setlocal
 cd /d "%~dp0"
+
 if not exist ".venv\Scripts\python.exe" (
-  echo 未找到项目虚拟环境，请先按照 README 安装依赖。
+  echo ERROR: Python virtual environment was not found.
+  echo Run the installation commands in README.md first.
   pause
   exit /b 1
 )
+
 ".venv\Scripts\python.exe" launch_daily_review.py
-if errorlevel 1 (
+set "EXIT_CODE=%ERRORLEVEL%"
+
+if not "%EXIT_CODE%"=="0" (
   echo.
-  echo 启动失败。请保留本窗口并检查上方错误信息。
+  echo ERROR: Daily review app failed to start. Exit code: %EXIT_CODE%
   pause
 )
+
+exit /b %EXIT_CODE%

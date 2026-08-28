@@ -13,6 +13,7 @@ from src.daily_report_generator import (
 )
 from src.models import DailyReview
 from src.storage import save_json_atomic, utc_now_iso
+from src.writing_rules import BANNED_META_TALK_TERMS
 
 
 def _save_review(project_paths, date: str, topic: str, notes: str) -> None:
@@ -125,6 +126,8 @@ def test_codex_context_is_local_and_contains_recent_material(project_paths) -> N
     assert context["external_model_api_required"] is False
     assert context["notes"] == "观察了现场设备布局。"
     assert context["facts"]["confirmed_facts"]
+    assert context["writing_rules"]["voice"].startswith("普通本科生第一人称")
+    assert "现有记录" in context["writing_rules"]["banned_meta_talk_terms"]
 
 
 def test_codex_authored_payload_is_wrapped_and_measured(project_paths) -> None:
@@ -156,3 +159,39 @@ def test_codex_authored_payload_is_wrapped_and_measured(project_paths) -> None:
     assert draft.metrics.body_characters > 0
     assert draft.metrics.remaining_characters < 500
     assert draft.content_hash
+
+
+def test_generated_scaffold_uses_first_person_without_meta_talk(project_paths) -> None:
+    date = "2026-07-09"
+    _save_review(project_paths, date, "产品资料学习", "学习医疗器械产品的基本用途。")
+
+    draft = generate_daily_draft(project_paths, date)
+    body = "\n".join(section.text for section in draft.sections if section.type == "paragraph")
+
+    assert "我" in body
+    assert not any(term in body for term in BANNED_META_TALK_TERMS)
+    assert draft.word_count_target == 650
+
+
+def test_meta_talk_is_warned_and_blocks_formal_approval(project_paths) -> None:
+    date = "2026-07-10"
+    _save_review(project_paths, date, "入职报到", "完成入职报到。")
+    payload = {
+        "date": date,
+        "title": "入职报到",
+        "confirmed_facts": ["完成入职报到。"],
+        "pending_confirmation": [],
+        "sections": [
+            {
+                "id": "body",
+                "type": "paragraph",
+                "text": "今天我完成了入职报到。现有记录没有写明具体部门，因此本日内容不补写这些细节。",
+            }
+        ],
+    }
+
+    draft = import_codex_daily_draft(project_paths, payload)
+
+    assert any("元话语" in warning for warning in draft.content_warnings)
+    with pytest.raises(ValueError, match="meta-language"):
+        approve_daily_draft(project_paths, date)

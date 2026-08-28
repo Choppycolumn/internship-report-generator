@@ -28,13 +28,28 @@ from src.printer_calibration import (
 from src.requirement_parser import RequirementImporter
 from src.storage import load_json
 from src.template_calibrator import mark_calibrated
-from src.template_importer import TemplateImporter, load_template, set_physical_size
+from src.template_importer import (
+    TemplateImporter,
+    load_template,
+    migrate_template,
+    set_physical_size,
+)
+from src.validators import validate_template
 
 
 def _json_print(value) -> None:
-    if hasattr(value, "model_dump"):
-        value = value.model_dump(mode="json")
-    print(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+    def jsonable(item):
+        if hasattr(item, "model_dump"):
+            return jsonable(item.model_dump(mode="json"))
+        if isinstance(item, dict):
+            return {str(key): jsonable(child) for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [jsonable(child) for child in item]
+        if isinstance(item, Path):
+            return str(item)
+        return item
+
+    print(json.dumps(jsonable(value), ensure_ascii=False, indent=2, default=str))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -108,6 +123,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     template_preview = template_commands.add_parser("preview")
     template_preview.add_argument("template_id")
+
+    template_validate = template_commands.add_parser(
+        "validate", help="Validate a template's size and calibration configuration"
+    )
+    template_validate.add_argument("template_id")
+
+    template_migrate = template_commands.add_parser(
+        "migrate", help="Preview or apply a v1-to-v2 template migration"
+    )
+    template_migrate.add_argument("template_id")
+    template_migrate.add_argument(
+        "--apply", action="store_true", help="Persist the normalized v2 configuration"
+    )
 
     printer = groups.add_parser("printer")
     printer_commands = printer.add_subparsers(dest="command", required=True)
@@ -249,6 +277,30 @@ def execute(args: argparse.Namespace) -> int:
         renderer.render(config, document, preview, "preview")
         renderer.render(config, document, debug, "debug")
         _json_print({"preview": preview, "debug": debug})
+        return 0
+    if args.group == "template" and args.command == "validate":
+        config = load_template(paths, args.template_id)
+        issues = validate_template(config)
+        _json_print(
+            {
+                "template_id": config.template_id,
+                "schema_version": config.schema_version,
+                "valid_for_print": not any(issue.severity.value == "error" for issue in issues),
+                "issues": issues,
+            }
+        )
+        return 0
+    if args.group == "template" and args.command == "migrate":
+        config, changed = migrate_template(paths, args.template_id, args.apply)
+        _json_print(
+            {
+                "template_id": config.template_id,
+                "schema_version": config.schema_version,
+                "changed": changed,
+                "applied": bool(args.apply and changed),
+                "config": config,
+            }
+        )
         return 0
 
     if args.group == "printer" and args.command == "calibration-page":

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from .models import RegionMM, TemplateConfig, TemplateStatus, WritingLine
+from .models import FieldTarget, RegionMM, TemplateConfig, TemplateStatus, WritingLine
 from .paths import ProjectPaths
 from .storage import utc_now_iso
 from .template_importer import load_template, save_template
@@ -72,6 +72,22 @@ def replace_writing_lines(
     return config
 
 
+def replace_fields(
+    paths: ProjectPaths,
+    template_id: str,
+    fields: dict[str, FieldTarget],
+) -> TemplateConfig:
+    config = load_template(paths, template_id)
+    for name, target in fields.items():
+        validate_region_on_page(config, target)
+        if not name.strip():
+            raise ValueError("Field names cannot be empty")
+    config.fields = fields
+    config.updated_at = utc_now_iso()
+    save_template(paths, config)
+    return config
+
+
 def mark_calibrated(paths: ProjectPaths, template_id: str) -> TemplateConfig:
     config = load_template(paths, template_id)
     config.require_confirmed_size()
@@ -79,8 +95,10 @@ def mark_calibrated(paths: ProjectPaths, template_id: str) -> TemplateConfig:
         raise ValueError(
             "A provisional physical size can be previewed but cannot be marked as final calibration"
         )
-    if not config.content_regions:
-        raise ValueError("At least one content region must be marked before calibration is complete")
+    if not (config.content_regions or config.fields or config.tables or config.table_regions):
+        raise ValueError(
+            "At least one content region, field, or table must be marked before calibration is complete"
+        )
     config.status = TemplateStatus.CALIBRATED
     config.updated_at = utc_now_iso()
     save_template(paths, config)

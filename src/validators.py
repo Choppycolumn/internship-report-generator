@@ -88,6 +88,133 @@ def validate_template(config: TemplateConfig) -> list[ValidationIssue]:
                     object_id=line.id,
                 )
             )
+    # v2 content regions carry the ordering and column model used by the
+    # paginator. Check the configuration explicitly so a bad template fails
+    # before a PDF is generated.
+    for region in config.content_regions:
+        if not 1 <= region.columns <= 4:
+            issues.append(
+                ValidationIssue(
+                    code="CONTENT_REGION_INVALID_COLUMNS",
+                    severity=Severity.ERROR,
+                    message="Content region columns must be between 1 and 4",
+                    object_id=region.id,
+                    )
+                )
+        usable_width = region.width_mm - region.column_gap_mm * (region.columns - 1)
+        if usable_width <= 0 or usable_width / region.columns < 5.0:
+            issues.append(
+                ValidationIssue(
+                    code="CONTENT_REGION_COLUMN_TOO_NARROW",
+                    severity=Severity.ERROR,
+                    message="Each content column must be at least 5 mm wide",
+                    object_id=region.id,
+                )
+            )
+        if region.layout_mode == "free":
+            if region.baseline_start_mm is not None and not (
+                region.y_mm - 1e-6 <= region.baseline_start_mm <= region.bottom_mm + 1e-6
+            ):
+                issues.append(
+                    ValidationIssue(
+                        code="CONTENT_REGION_BASELINE_OUT_OF_BOUNDS",
+                        severity=Severity.ERROR,
+                        message="Free content baseline_start_mm must lie within its region",
+                        object_id=region.id,
+                    )
+                )
+            if region.line_spacing_mm is None or region.line_spacing_mm <= 0:
+                issues.append(
+                    ValidationIssue(
+                        code="CONTENT_REGION_FREE_SPACING_MISSING",
+                        severity=Severity.ERROR,
+                        message="Free content regions require a positive line_spacing_mm",
+                        object_id=region.id,
+                    )
+                )
+
+    for index, region in enumerate(config.content_regions):
+        for other in config.content_regions[index + 1 :]:
+            if region.intersects(other, tolerance_mm=0.1):
+                issues.append(
+                    ValidationIssue(
+                        code="CONTENT_REGION_OVERLAP",
+                        severity=Severity.ERROR,
+                        message="Content regions overlap",
+                        object_id=region.id,
+                        details={"other_region_id": other.id},
+                    )
+                )
+
+    def _check_target(target: RegionMM, code: str, label: str) -> None:
+        if target.right_mm > page_width + 1e-6 or target.bottom_mm > page_height + 1e-6:
+            issues.append(
+                ValidationIssue(
+                    code=code,
+                    severity=Severity.ERROR,
+                    message=f"{label} target exceeds physical page",
+                    object_id=target.id,
+                )
+            )
+
+    field_targets = list(config.fields.items())
+    for name, target in field_targets:
+        _check_target(target, "FIELD_TARGET_OUT_OF_BOUNDS", f"Field '{name}'")
+        for protected in config.forbidden_regions:
+            if target.intersects(protected, tolerance_mm=0.1):
+                issues.append(
+                    ValidationIssue(
+                        code="FIELD_TARGET_IN_FORBIDDEN_REGION",
+                        severity=Severity.ERROR,
+                        message=f"Field '{name}' target intersects a forbidden region",
+                        object_id=name,
+                    )
+                )
+    for index, (name, target) in enumerate(field_targets):
+        for other_name, other in field_targets[index + 1 :]:
+            if target.intersects(other, tolerance_mm=0.1):
+                issues.append(
+                    ValidationIssue(
+                        code="FIELD_TARGET_OVERLAP",
+                        severity=Severity.ERROR,
+                        message=f"Field targets '{name}' and '{other_name}' overlap",
+                        object_id=name,
+                        details={"other_field": other_name},
+                    )
+                )
+
+    for table_id, table in config.tables.items():
+        if table.region is not None:
+            _check_target(table.region, "TABLE_REGION_OUT_OF_BOUNDS", f"Table '{table_id}'")
+        cells = table.cells
+        for cell in cells:
+            _check_target(cell, "TABLE_CELL_OUT_OF_BOUNDS", f"Table '{table_id}' cell")
+            if table.region is not None and not (
+                cell.x_mm >= table.region.x_mm - 1e-6
+                and cell.right_mm <= table.region.right_mm + 1e-6
+                and cell.y_mm >= table.region.y_mm - 1e-6
+                and cell.bottom_mm <= table.region.bottom_mm + 1e-6
+            ):
+                issues.append(
+                    ValidationIssue(
+                        code="TABLE_CELL_OUT_OF_BOUNDS",
+                        severity=Severity.ERROR,
+                        message=f"Table cell '{cell.id}' lies outside table '{table_id}'",
+                        object_id=cell.id,
+                    )
+                )
+        for index, cell in enumerate(cells):
+            for other in cells[index + 1 :]:
+                if cell.intersects(other, tolerance_mm=0.1):
+                    issues.append(
+                        ValidationIssue(
+                            code="TABLE_CELL_OVERLAP",
+                            severity=Severity.ERROR,
+                            message=f"Cells in table '{table_id}' overlap",
+                            object_id=cell.id,
+                            details={"other_cell_id": other.id},
+                        )
+                    )
     return issues
 
 
@@ -127,6 +254,9 @@ def validate_layout(
             + config.table_regions
             + config.signature_regions
             + config.page_number_regions
+            + list(config.fields.values())
+            + [table.region for table in config.tables.values() if table.region is not None]
+            + [cell for table in config.tables.values() for cell in table.cells]
         )
         for protected_region in protected:
             if region.intersects(protected_region, tolerance_mm=0.1):
@@ -210,9 +340,17 @@ def validate_layout(
             + config.header_regions
             + config.fixed_text_regions
             + config.image_regions
-            + config.table_regions
             + config.signature_regions
         )
+        if item.role != "field":
+            protected_regions += config.table_regions
+            protected_regions += list(config.fields.values())
+            protected_regions += [
+                table.region for table in config.tables.values() if table.region is not None
+            ]
+            protected_regions += [
+                cell for table in config.tables.values() for cell in table.cells
+            ]
         if item.role != "page_number":
             protected_regions += config.page_number_regions
         for forbidden in protected_regions:
@@ -253,6 +391,20 @@ def validate_layout(
                         object_id=item.id,
                     )
                 )
+    # Catch text frames that collide after all block types have been resolved.
+    text_regions = [(item, text_item_region(item)) for item in document.text_items]
+    for index, (item, region) in enumerate(text_regions):
+        for other_item, other_region in text_regions[index + 1 :]:
+            if region.intersects(other_region, tolerance_mm=0.05):
+                issues.append(
+                    ValidationIssue(
+                        code="TEXT_OVERLAP",
+                        severity=Severity.ERROR,
+                        message="Two text frames overlap",
+                        object_id=item.id,
+                        details={"other_text_id": other_item.id},
+                    )
+                )
     return ValidationReport(
         valid_for_print=not any(issue.severity == Severity.ERROR for issue in issues),
         issues=issues,
@@ -265,6 +417,7 @@ def validate_paginated_layout(
     minimum_font_size_pt: float = 8.0,
 ) -> ValidationReport:
     issues: list[ValidationIssue] = []
+    page_sizes: dict[tuple[float, float], list[int]] = {}
     for page_index, page in enumerate(document.pages, 1):
         config = configs.get(page.template_id)
         if config is None:
@@ -283,9 +436,24 @@ def validate_paginated_layout(
             image_items=page.image_items,
         )
         page_report = validate_layout(config, page_document, minimum_font_size_pt)
+        try:
+            width_mm, height_mm = config.require_confirmed_size()
+        except ValueError:
+            width_mm = height_mm = None
+        if width_mm is not None and height_mm is not None:
+            page_sizes.setdefault((round(width_mm, 3), round(height_mm, 3)), []).append(page_index)
         for issue in page_report.issues:
             issue.details = {**issue.details, "page_index": page_index}
             issues.append(issue)
+    if len(page_sizes) > 1:
+        issues.append(
+            ValidationIssue(
+                code="MIXED_PAGE_SIZES",
+                severity=Severity.WARNING,
+                message="Paginated document contains multiple physical page sizes",
+                details={"page_sizes_mm": {f"{width}x{height}": pages for (width, height), pages in page_sizes.items()}},
+            )
+        )
     return ValidationReport(
         valid_for_print=not any(issue.severity == Severity.ERROR for issue in issues),
         issues=issues,

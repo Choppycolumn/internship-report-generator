@@ -6,10 +6,16 @@ from pathlib import Path
 
 from PIL import Image
 
-from src.models import RegionMM, WritingLine
+from src.models import ContentRegion, FieldTarget, RegionMM, WritingLine
 from src.line_detector import apply_detected_lines, detect_horizontal_lines
 from src.paths import get_paths
-from src.template_calibrator import REGION_KINDS, mark_calibrated, replace_regions, replace_writing_lines
+from src.template_calibrator import (
+    REGION_KINDS,
+    mark_calibrated,
+    replace_fields,
+    replace_regions,
+    replace_writing_lines,
+)
 from src.template_editor import create_editor_overlay
 from src.template_importer import load_template, set_physical_size
 
@@ -32,6 +38,13 @@ def _regions_as_rows(regions: list[RegionMM]) -> list[dict]:
 
 def _lines_as_rows(lines: list[WritingLine]) -> list[dict]:
     return [line.model_dump() for line in lines]
+
+
+def _editor_rows(value) -> list[dict]:
+    """Normalize Streamlit's list/DataFrame editor return value."""
+    if hasattr(value, "to_dict"):
+        return value.to_dict("records")
+    return [dict(row) for row in value]
 
 
 def main() -> None:
@@ -147,9 +160,43 @@ def main() -> None:
             key=f"regions-{selected_kind}",
         )
         if st.button("保存区域表"):
-            regions = [RegionMM.model_validate(row) for row in region_table]
-            replace_regions(paths, template_id, selected_kind, regions)
-            st.success("区域表已保存。")
+            try:
+                region_rows = _editor_rows(region_table)
+                if selected_kind == "content_regions":
+                    regions = [
+                        ContentRegion.model_validate(row) for row in region_rows
+                    ]
+                else:
+                    regions = [RegionMM.model_validate(row) for row in region_rows]
+                replace_regions(paths, template_id, selected_kind, regions)
+                st.success("区域表已保存。")
+            except ValueError as exc:
+                st.error(str(exc))
+
+        st.subheader("字段目标")
+        st.caption("按字段名称保存套打区域；对齐方式支持 left、center、right。")
+        field_rows = [
+            {"name": name, **target.model_dump()}
+            for name, target in config.fields.items()
+        ]
+        field_table = st.data_editor(
+            field_rows,
+            num_rows="dynamic",
+            use_container_width=True,
+            key=f"fields-{template_id}",
+        )
+        if st.button("保存字段目标"):
+            try:
+                fields = {}
+                for row in _editor_rows(field_table):
+                    row = dict(row)
+                    name = str(row.pop("name", "")).strip()
+                    if name:
+                        fields[name] = FieldTarget.model_validate(row)
+                replace_fields(paths, template_id, fields)
+                st.success("字段目标已保存。")
+            except ValueError as exc:
+                st.error(str(exc))
 
         st.subheader("真实横线")
         st.caption("可逐条新增、删除和修改；不假设横线等距。")
@@ -170,9 +217,12 @@ def main() -> None:
             key="writing-lines",
         )
         if st.button("保存横线表"):
-            lines = [WritingLine.model_validate(row) for row in line_table]
-            replace_writing_lines(paths, template_id, lines)
-            st.success("横线已保存。")
+            try:
+                lines = [WritingLine.model_validate(row) for row in _editor_rows(line_table)]
+                replace_writing_lines(paths, template_id, lines)
+                st.success("横线已保存。")
+            except ValueError as exc:
+                st.error(str(exc))
 
         if st.button("完成本模板标定"):
             mark_calibrated(paths, template_id)

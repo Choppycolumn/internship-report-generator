@@ -20,6 +20,7 @@ from src.daily_material_reader import (
 )
 from src.daily_report_generator import (
     approve_daily_draft,
+    fully_approve_daily_draft,
     generate_daily_draft,
     load_daily_draft,
     save_daily_draft,
@@ -110,6 +111,11 @@ HTML = r"""<!doctype html>
       <button id="load" type="button">打开该日期</button>
       <button id="save" class="primary" type="button">保存审核内容</button>
     </div>
+    <div class="actions" aria-label="日期导航与批准">
+      <button id="previousDay" type="button">前一天</button>
+      <button id="nextDay" type="button">后一天</button>
+      <button id="fullyApproveDay" class="primary" type="button" title="确认当天全部内容并锁定">批准</button>
+    </div>
     <div class="notice">原图保存在 attachments/originals；处理图用于排版。自动质量判断只是提示，仍需人工确认隐私、人物授权和图片内容。</div>
     <div id="status"></div>
   </section>
@@ -119,7 +125,6 @@ HTML = r"""<!doctype html>
     <div class="actions">
       <button id="generateDraft" type="button">生成安全草稿框架</button>
       <button id="saveDraft" type="button">保存草稿修改</button>
-      <button id="approveDraft" class="primary" type="button">批准并锁定</button>
     </div>
     <div id="draftMessage" class="panel-intro">尚未加载草稿。</div>
     <div id="draftEditor" hidden>
@@ -141,6 +146,7 @@ HTML = r"""<!doctype html>
 const $ = s => document.querySelector(s);
 let images = [];
 let draft = null;
+let savedDates = [];
 const today = new Date();
 $('#date').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
@@ -179,7 +185,7 @@ function renderDraft() {
   const locked=draft?.status==='approved';
   editor.hidden=!draft;
   $('#saveDraft').disabled=!draft||locked;
-  $('#approveDraft').disabled=!draft||locked;
+  $('#fullyApproveDay').disabled=!draft||locked;
   if(!draft){$('#draftMessage').textContent='尚未加载草稿。';return;}
   $('#draftMessage').innerHTML=locked?'<div class="locked">该日期草稿已经批准并锁定。</div>':`草稿版本 ${draft.version} · 置信度 ${(draft.confidence*100).toFixed(0)}%`;
   $('#draftTitle').value=draft.title||''; $('#draftTitle').disabled=locked;
@@ -217,6 +223,7 @@ $('#files').addEventListener('change', async e => {
 
 async function loadDates() {
   const response=await fetch('/api/dates'); const data=await response.json();
+  savedDates=[...(data.dates||[])].sort();
   const select=$('#existingDates'); select.innerHTML='<option value="">选择日期…</option>';
   data.dates.forEach(date=>{const option=document.createElement('option');option.value=date;option.textContent=date;select.appendChild(option);});
 }
@@ -231,8 +238,27 @@ async function loadDay() {
   images=(data.images||[]).map(item=>({...item,preview:item.image_url})); render();
   const draftResponse=await fetch(`/api/draft?date=${encodeURIComponent(date)}`); const draftData=await draftResponse.json();
   draft=draftResponse.ok?draftData.draft:null; renderDraft(); $('#status').textContent=`已打开 ${date}，共 ${images.length} 张图片。`;
+  $('#existingDates').value=date;
 }
 $('#load').onclick=loadDay;
+
+async function navigateReport(direction) {
+  if(!savedDates.length) return;
+  const current=$('#date').value;
+  const index=savedDates.indexOf(current);
+  let nextIndex;
+  if(index>=0) nextIndex=index+direction;
+  else if(direction<0) nextIndex=savedDates.filter(value=>value<current).length-1;
+  else nextIndex=savedDates.findIndex(value=>value>current);
+  if(nextIndex<0||nextIndex>=savedDates.length) {
+    $('#status').textContent=direction<0?'已经是第一份报告。':'已经是最后一份报告。';
+    return;
+  }
+  $('#date').value=savedDates[nextIndex];
+  await loadDay();
+}
+$('#previousDay').onclick=()=>navigateReport(-1);
+$('#nextDay').onclick=()=>navigateReport(1);
 
 $('#captionDraft').onclick=()=>{
   const topic=$('#topic').value.trim()||'当日实习';
@@ -267,7 +293,28 @@ async function saveDraftChanges(){
 
 $('#generateDraft').onclick=async()=>{try{await saveReview();const response=await fetch('/api/generate-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#date').value})});const data=await response.json();if(!response.ok)throw new Error(data.error||'草稿生成失败');draft=data.draft;renderDraft();}catch(error){$('#draftMessage').textContent=error.message;}};
 $('#saveDraft').onclick=async()=>{try{await saveDraftChanges();}catch(error){$('#draftMessage').textContent=error.message;}};
-$('#approveDraft').onclick=async()=>{try{await saveDraftChanges();const response=await fetch('/api/approve-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#date').value})});const data=await response.json();if(!response.ok)throw new Error(data.error||'批准失败');draft=data.draft;renderDraft();}catch(error){$('#draftMessage').textContent=error.message;}};
+$('#fullyApproveDay').onclick=async()=>{
+  if(!draft||draft.status==='approved') return;
+  if(!window.confirm('批准后当天内容将被完全确认并锁定，是否继续？')) return;
+  try{
+    images.forEach(item=>item.approved=true);
+    $('#statusSelect').value='reviewed';
+    $('#pendingFacts').value='';
+    draft.facts.pending_confirmation=[];
+    (draft.sections||[]).forEach(section=>section.requires_confirmation=false);
+    render();
+    await saveReview();
+    await saveDraftChanges();
+    const response=await fetch('/api/fully-approve-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#date').value})});
+    const data=await response.json();
+    if(!response.ok) throw new Error(data.error||'批准失败');
+    draft=data.draft;
+    $('#statusSelect').value='approved';
+    renderDraft();
+    $('#status').textContent=`${$('#date').value} 已完全批准并锁定。`;
+    await loadDates();
+  }catch(error){$('#draftMessage').textContent=error.message;}
+};
 async function bootstrap() {
   await loadDates();
   const requestedDate=new URLSearchParams(window.location.search).get('date');
@@ -431,6 +478,7 @@ def make_handler(paths: ProjectPaths):
                 "/api/generate-draft",
                 "/api/save-draft",
                 "/api/approve-draft",
+                "/api/fully-approve-draft",
             }:
                 self.send_error(404)
                 return
@@ -453,8 +501,11 @@ def make_handler(paths: ProjectPaths):
                     draft = DailyDraft.model_validate(payload.get("draft"))
                     saved = save_daily_draft(paths, draft)
                     self._send_json({"ok": True, "draft": _draft_payload(saved)})
-                else:
+                elif path == "/api/approve-draft":
                     draft = approve_daily_draft(paths, str(payload.get("date", "")))
+                    self._send_json({"ok": True, "draft": _draft_payload(draft)})
+                else:
+                    draft = fully_approve_daily_draft(paths, str(payload.get("date", "")))
                     self._send_json({"ok": True, "draft": _draft_payload(draft)})
             except Exception as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)

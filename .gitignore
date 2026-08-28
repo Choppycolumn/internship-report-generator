@@ -9,6 +9,12 @@ tmp/
 *.log
 *.dmp
 PROJECT_STATUS.md
+backup/
+
+# Personal report drafts and exported documents are local working data.
+reports/*.md
+reports/*.docx
+docs/实习日志改写实习报告说明.md
 
 # User-provided materials and generated artifacts stay local by default.
 requirements/manifest.json

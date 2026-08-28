@@ -21,6 +21,14 @@ from .models import (
 )
 from .paths import ProjectPaths
 from .storage import save_json_atomic, utc_now_iso
+from .writing_rules import (
+    DEFAULT_DAILY_TARGET,
+    RECOMMENDED_DAILY_MAX,
+    codex_daily_writing_rules,
+    find_meta_talk_terms,
+    paragraph_text,
+    uses_first_person,
+)
 
 
 REFLECTION_MARKERS = ("收获", "体会", "认识", "理解", "意识", "思考", "问题")
@@ -73,6 +81,14 @@ def _refresh(paths: ProjectPaths, draft: DailyDraft) -> DailyDraft:
         warnings.append(f"历史内容最高相似度为 {draft.metrics.max_similarity:.0%}。")
     if draft.metrics.remaining_characters:
         warnings.append(f"距离当日建议字数还差 {draft.metrics.remaining_characters} 字。")
+    body_text = paragraph_text(draft.sections)
+    meta_terms = find_meta_talk_terms(body_text)
+    if meta_terms:
+        warnings.append(f"正文含有元话语或核验式表达：{'、'.join(meta_terms)}。")
+    if body_text and not uses_first_person(body_text):
+        warnings.append("正文缺少第一人称本科生视角。")
+    if draft.word_count_target <= RECOMMENDED_DAILY_MAX and draft.metrics.body_characters > RECOMMENDED_DAILY_MAX:
+        warnings.append(f"正文超过日记建议上限 {RECOMMENDED_DAILY_MAX} 字，请检查是否过度展开。")
     draft.content_warnings = warnings
     total = (
         len(draft.facts.confirmed_facts)
@@ -122,7 +138,7 @@ def generate_daily_draft(
         if existing_path.exists()
         else None
     )
-    target = int(word_count_target or metadata.get("word_count_target") or 800)
+    target = int(word_count_target or metadata.get("word_count_target") or DEFAULT_DAILY_TARGET)
     if target < 100:
         raise ValueError("word_count_target must be at least 100")
 
@@ -132,11 +148,11 @@ def generate_daily_draft(
     intro: list[str] = []
     basis: list[str] = []
     if review.topic.strip():
-        intro.append(f"当天实习围绕“{review.topic.strip()}”展开。")
+        intro.append(f"今天我的实习主题是“{review.topic.strip()}”。")
         basis.append(f"topic:{review.topic.strip()}")
     if note_facts:
         joined = "；".join(item.rstrip("。！？!?；;") for item in note_facts)
-        intro.append(f"根据当日记录，{joined}。")
+        intro.append(f"按照当天安排，我{joined}。")
         basis.extend(f"note:{item}" for item in note_facts)
     if intro:
         sections.append(
@@ -272,6 +288,7 @@ def build_codex_context(paths: ProjectPaths, date: str) -> dict:
             for image in review.images
         ],
         "recent_approved_history": history,
+        "writing_rules": codex_daily_writing_rules(),
         "writeback_format": "CodexDailyDraftInput",
     }
 
@@ -335,7 +352,12 @@ def approve_daily_draft(paths: ProjectPaths, date: str) -> DailyDraft:
     unresolved = [section.id for section in draft.sections if section.requires_confirmation]
     if unresolved:
         blockers.append(f"sections still require confirmation: {', '.join(unresolved)}")
-    body_text = "\n".join(section.text for section in draft.sections if section.type == "paragraph")
+    body_text = paragraph_text(draft.sections)
+    meta_terms = find_meta_talk_terms(body_text)
+    if meta_terms:
+        blockers.append(f"report prose contains meta-language: {', '.join(meta_terms)}")
+    if body_text and not uses_first_person(body_text):
+        blockers.append("report prose must use a first-person undergraduate voice")
     for claim in draft.facts.prohibited_claims:
         if claim and claim in body_text:
             blockers.append(f"prohibited claim appears in content: {claim}")
@@ -369,3 +391,34 @@ def approve_daily_draft(paths: ProjectPaths, date: str) -> DailyDraft:
     review.status = "approved"
     save_daily_review(paths, review)
     return draft
+
+
+def fully_approve_daily_draft(paths: ProjectPaths, date: str) -> DailyDraft:
+    """Confirm all review flags for a day, then run the normal approval gates."""
+    normalized = validate_date(date)
+    draft = load_daily_draft(paths, normalized)
+    if draft.status == "approved":
+        return draft
+
+    review = load_daily_review(paths, normalized)
+    incomplete_images = [
+        image.id
+        for image in review.images
+        if not image.caption.strip() or not image.generated_text.strip()
+    ]
+    if incomplete_images:
+        raise ValueError(
+            "Cannot fully approve images without captions and corresponding text: "
+            + ", ".join(incomplete_images)
+        )
+
+    draft.facts.pending_confirmation = []
+    for section in draft.sections:
+        section.requires_confirmation = False
+    for image in review.images:
+        image.approved = True
+    review.status = "reviewed"
+
+    save_daily_review(paths, review)
+    save_daily_draft(paths, draft)
+    return approve_daily_draft(paths, normalized)

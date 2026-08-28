@@ -6,7 +6,14 @@ import urllib.error
 import urllib.request
 from http.server import ThreadingHTTPServer
 
-from daily_review_app import make_handler
+from daily_review_app import HTML, make_handler
+
+
+def test_daily_review_html_has_navigation_and_full_approval_buttons() -> None:
+    assert 'id="previousDay"' in HTML
+    assert 'id="nextDay"' in HTML
+    assert 'id="fullyApproveDay"' in HTML
+    assert "/api/fully-approve-draft" in HTML
 
 
 def _request(base: str, path: str, payload: dict | None = None) -> tuple[int, dict]:
@@ -77,6 +84,46 @@ def test_daily_review_http_draft_and_approval_flow(project_paths) -> None:
         status, rejected = _request(base, "/api/save-draft", {"draft": loaded["draft"]})
         assert status == 400
         assert "approved locked draft" in rejected["error"]
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_daily_review_http_full_approval_clears_confirmation_flags(project_paths) -> None:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(project_paths))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    date = "2026-07-07"
+    try:
+        status, _ = _request(
+            base,
+            "/api/save-day",
+            {
+                "date": date,
+                "topic": "岗位规范学习",
+                "notes": "学习了岗位工作规范。",
+                "status": "draft",
+                "images": [],
+            },
+        )
+        assert status == 200
+        status, generated = _request(base, "/api/generate-draft", {"date": date})
+        assert status == 200
+        draft = generated["draft"]
+        for section in draft["sections"]:
+            if section["requires_confirmation"]:
+                section["text"] = "今天我结合岗位要求整理了当天的学习内容。"
+        status, _ = _request(base, "/api/save-draft", {"draft": draft})
+        assert status == 200
+
+        status, approved = _request(base, "/api/fully-approve-draft", {"date": date})
+
+        assert status == 200
+        assert approved["draft"]["status"] == "approved"
+        assert approved["draft"]["facts"]["pending_confirmation"] == []
+        assert not any(item["requires_confirmation"] for item in approved["draft"]["sections"])
     finally:
         server.shutdown()
         server.server_close()

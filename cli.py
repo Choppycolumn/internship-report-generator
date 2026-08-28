@@ -9,6 +9,14 @@ from src.export_manager import ExportManager
 from src.models import LayoutDocument, PrinterCalibration, TextItem
 from src.line_detector import LineDetectionOptions, apply_detected_lines, detect_horizontal_lines
 from src.daily_material_reader import load_daily_review, save_daily_review
+from src.content_planner import analyze_daily_material
+from src.daily_report_generator import (
+    approve_daily_draft,
+    build_codex_context,
+    generate_daily_draft,
+    import_codex_daily_draft,
+    load_daily_draft,
+)
 from src.paths import get_paths
 from src.pdf_renderer import PdfRenderer
 from src.perspective_corrector import correct_template
@@ -18,14 +26,30 @@ from src.printer_calibration import (
     save_calibration,
 )
 from src.requirement_parser import RequirementImporter
+from src.storage import load_json
 from src.template_calibrator import mark_calibrated
-from src.template_importer import TemplateImporter, load_template, set_physical_size
+from src.template_importer import (
+    TemplateImporter,
+    load_template,
+    migrate_template,
+    set_physical_size,
+)
+from src.validators import validate_template
 
 
 def _json_print(value) -> None:
-    if hasattr(value, "model_dump"):
-        value = value.model_dump(mode="json")
-    print(json.dumps(value, ensure_ascii=False, indent=2, default=str))
+    def jsonable(item):
+        if hasattr(item, "model_dump"):
+            return jsonable(item.model_dump(mode="json"))
+        if isinstance(item, dict):
+            return {str(key): jsonable(child) for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [jsonable(child) for child in item]
+        if isinstance(item, Path):
+            return str(item)
+        return item
+
+    print(json.dumps(jsonable(value), ensure_ascii=False, indent=2, default=str))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -100,6 +124,19 @@ def build_parser() -> argparse.ArgumentParser:
     template_preview = template_commands.add_parser("preview")
     template_preview.add_argument("template_id")
 
+    template_validate = template_commands.add_parser(
+        "validate", help="Validate a template's size and calibration configuration"
+    )
+    template_validate.add_argument("template_id")
+
+    template_migrate = template_commands.add_parser(
+        "migrate", help="Preview or apply a v1-to-v2 template migration"
+    )
+    template_migrate.add_argument("template_id")
+    template_migrate.add_argument(
+        "--apply", action="store_true", help="Persist the normalized v2 configuration"
+    )
+
     printer = groups.add_parser("printer")
     printer_commands = printer.add_subparsers(dest="command", required=True)
     calibration_page = printer_commands.add_parser("calibration-page")
@@ -124,6 +161,17 @@ def build_parser() -> argparse.ArgumentParser:
     day_import.add_argument("date")
     day_analyze = day_commands.add_parser("analyze")
     day_analyze.add_argument("date")
+    day_draft = day_commands.add_parser("draft")
+    day_draft.add_argument("date")
+    day_draft.add_argument("--target-characters", type=int)
+    day_word_count = day_commands.add_parser("word-count")
+    day_word_count.add_argument("date")
+    day_context = day_commands.add_parser("context")
+    day_context.add_argument("date")
+    day_import_draft = day_commands.add_parser("import-draft")
+    day_import_draft.add_argument("file", type=Path)
+    day_approve = day_commands.add_parser("approve")
+    day_approve.add_argument("date")
     day_review = day_commands.add_parser("review-app")
     day_review.add_argument("--host", default="127.0.0.1")
     day_review.add_argument("--port", type=int, default=8765)
@@ -230,6 +278,30 @@ def execute(args: argparse.Namespace) -> int:
         renderer.render(config, document, debug, "debug")
         _json_print({"preview": preview, "debug": debug})
         return 0
+    if args.group == "template" and args.command == "validate":
+        config = load_template(paths, args.template_id)
+        issues = validate_template(config)
+        _json_print(
+            {
+                "template_id": config.template_id,
+                "schema_version": config.schema_version,
+                "valid_for_print": not any(issue.severity.value == "error" for issue in issues),
+                "issues": issues,
+            }
+        )
+        return 0
+    if args.group == "template" and args.command == "migrate":
+        config, changed = migrate_template(paths, args.template_id, args.apply)
+        _json_print(
+            {
+                "template_id": config.template_id,
+                "schema_version": config.schema_version,
+                "changed": changed,
+                "applied": bool(args.apply and changed),
+                "config": config,
+            }
+        )
+        return 0
 
     if args.group == "printer" and args.command == "calibration-page":
         config = load_template(paths, args.template_id)
@@ -280,6 +352,7 @@ def execute(args: argparse.Namespace) -> int:
         return 0
     if args.group == "day" and args.command == "analyze":
         review = load_daily_review(paths, args.date)
+        facts = analyze_daily_material(paths, args.date)
         _json_print(
             {
                 "date": review.date,
@@ -298,8 +371,38 @@ def execute(args: argparse.Namespace) -> int:
                 "images_missing_text": [
                     image.id for image in review.images if not image.generated_text.strip()
                 ],
+                "facts": facts.model_dump(mode="json"),
             }
         )
+        return 0
+    if args.group == "day" and args.command == "draft":
+        draft = generate_daily_draft(paths, args.date, args.target_characters)
+        _json_print(draft)
+        return 0
+    if args.group == "day" and args.command == "word-count":
+        draft = load_daily_draft(paths, args.date)
+        _json_print(
+            {
+                "date": draft.date,
+                "status": draft.status,
+                "body_characters": draft.metrics.body_characters,
+                "target_characters": draft.metrics.target_characters,
+                "remaining_characters": draft.metrics.remaining_characters,
+                "section_characters": draft.metrics.section_characters,
+                "max_similarity": draft.metrics.max_similarity,
+            }
+        )
+        return 0
+    if args.group == "day" and args.command == "context":
+        _json_print(build_codex_context(paths, args.date))
+        return 0
+    if args.group == "day" and args.command == "import-draft":
+        draft = import_codex_daily_draft(paths, load_json(args.file))
+        _json_print(draft)
+        return 0
+    if args.group == "day" and args.command == "approve":
+        draft = approve_daily_draft(paths, args.date)
+        _json_print(draft)
         return 0
     if args.group == "day" and args.command == "review-app":
         from daily_review_app import serve

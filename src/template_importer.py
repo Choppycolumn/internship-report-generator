@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import math
 import re
 from pathlib import Path
@@ -136,6 +137,26 @@ def load_template(paths: ProjectPaths, template_id: str) -> TemplateConfig:
     if not config_path.exists():
         raise FileNotFoundError(f"Template config not found: {config_path}")
     return TemplateConfig.model_validate_json(config_path.read_text(encoding="utf-8"))
+
+
+def migrate_template(
+    paths: ProjectPaths, template_id: str, apply: bool = False
+) -> tuple[TemplateConfig, bool]:
+    """Load and normalize a template, optionally persisting the v2 document.
+
+    The default is deliberately read-only so users can inspect a migration
+    before changing an existing template configuration.
+    """
+    config_path = paths.template_config(sanitize_template_id(template_id))
+    if not config_path.exists():
+        raise FileNotFoundError(f"Template config not found: {config_path}")
+    raw = json.loads(config_path.read_text(encoding="utf-8"))
+    config = TemplateConfig.model_validate(raw)
+    normalized = config.model_dump(mode="json")
+    changed = raw != normalized
+    if apply and changed:
+        save_template(paths, config)
+    return config, changed
 
 
 def save_template(paths: ProjectPaths, config: TemplateConfig) -> None:

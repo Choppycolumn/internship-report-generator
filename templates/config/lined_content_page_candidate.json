@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "template_id": "lined_content_page_candidate",
+  "display_name": "带固定页眉的空白正文页候选",
+  "status": "corrected",
+  "physical_width_mm": 180.876,
+  "physical_height_mm": 258.484,
+  "physical_size_source": "user_measurement",
+  "source_media": "templates/raw/手写_2026-07-10_110724.pdf",
+  "source_sha256": "f7881a3e3bc3cb89d952d7d1b6b95e2120f69fbb9a4d4b4abb637627b2c8de0e",
+  "source_kind": "pdf",
+  "source_preview_image": "templates/preview/lined_content_page_candidate_source.png",
+  "corrected_image": "templates/corrected/lined_content_page_candidate.png",
+  "source_pixel_width": 3990,
+  "source_pixel_height": 5702,
+  "source_dpi": null,
+  "diagnostic_pdf_media_box_mm": [
+    168.981,
+    241.653
+  ],
+  "orientation": "portrait",
+  "binding_side": "unknown",
+  "notes": "模板候选；实测宽高、装订侧和页面用途尚待用户确认。PDF介质框不得作为物理尺寸。\n用户确认由152mm标题横线反推的页面尺寸与实物大致相符；仅用于预览和普通纸校准，正式套打继续锁定。\n页眉保护区和正文区为自动候选，仅用于预览；尚未确认正文起止位置和虚拟行距。\n用户确认现有物理尺寸即为其实测值，无需再次测量；正式套打已解锁。",
+  "content_regions": [
+    {
+      "id": "content_provisional",
+      "label": "正文候选区-待人工确认",
+      "x_mm": 16.909,
+      "y_mm": 38.0,
+      "width_mm": 151.999,
+      "height_mm": 200.0
+    }
+  ],
+  "header_regions": [
+    {
+      "id": "header_provisional",
+      "label": "自动页眉保护区-待确认",
+      "x_mm": 15.909,
+      "y_mm": 19.354,
+      "width_mm": 153.999,
+      "height_mm": 11.597
+    }
+  ],
+  "fixed_text_regions": [
+    {
+      "id": "title_provisional",
+      "label": "固定标题-自动识别待确认",
+      "x_mm": 50.906,
+      "y_mm": 19.354,
+      "width_mm": 84.777,
+      "height_mm": 10.386
+    }
+  ],
+  "forbidden_regions": [],
+  "image_regions": [],
+  "table_regions": [],
+  "signature_regions": [],
+  "page_number_regions": [],
+  "writing_lines": [
+    {
+      "id": "virtual_01",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 42.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_02",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 49.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_03",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 56.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_04",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 63.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_05",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 70.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_06",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 77.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_07",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 84.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_08",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 91.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_09",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 98.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_10",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 105.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_11",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 112.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_12",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 119.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_13",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 126.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_14",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 133.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_15",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 140.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_16",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 147.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_17",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 154.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_18",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 161.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_19",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 168.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_20",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 175.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_21",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 182.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_22",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 189.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_23",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 196.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_24",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 203.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_25",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 210.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_26",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 217.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_27",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 224.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_28",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 231.0,
+      "confidence": 1.0,
+      "source": "manual"
+    },
+    {
+      "id": "virtual_29",
+      "x_start_mm": 16.909,
+      "x_end_mm": 168.908,
+      "y_mm": 238.0,
+      "confidence": 1.0,
+      "source": "manual"
+    }
+  ],
+  "detected_writing_lines": [],
+  "fields": {},
+  "manual_measurements": {
+    "header_rule_length_mm": 152.0,
+    "header_rule_length_source": "user_measurement",
+    "header_rule_x0_px": 365.0,
+    "header_rule_y0_px": 666.65,
+    "header_rule_x1_px": 3718.0,
+    "header_rule_y1_px": 654.4,
+    "header_rule_pixel_length": 3353.022,
+    "local_horizontal_px_per_mm": 22.059358,
+    "estimated_page_width_mm_reference_only": 180.876,
+    "estimated_page_height_mm_reference_only": 258.484,
+    "estimated_size_is_confirmed": false,
+    "deskew_degree": -0.2094,
+    "estimated_size_user_accepted": true,
+    "corrected_header_rule_angle_degree": 0.00038,
+    "corrected_header_rule_x0_px": 373.0,
+    "corrected_header_rule_y_px": 660.706,
+    "corrected_header_rule_x1_px": 3726.0,
+    "provisional_content_region_requires_confirmation": true,
+    "virtual_writing_lines_not_configured": true,
+    "virtual_line_spacing_mm": 7.0,
+    "virtual_first_line_y_mm": 42.0,
+    "virtual_writing_lines_configured": true,
+    "virtual_writing_lines_requires_confirmation": true
+  },
+  "confidence": {
+    "header_rule_pixel_detection": 0.98,
+    "page_boundary": 1.0
+  },
+  "imported_at": "2026-07-10T03:37:44.872038+00:00",
+  "updated_at": "2026-08-18T14:58:46.735369+00:00"
+}

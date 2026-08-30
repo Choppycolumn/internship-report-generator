@@ -34,12 +34,16 @@ days/*
 
 templates/raw/*
 !templates/raw/.gitkeep
+!templates/raw/手写_2026-07-10_110724.pdf
 templates/preview/*
 !templates/preview/.gitkeep
+!templates/preview/lined_content_page_candidate_source.png
 templates/corrected/*
 !templates/corrected/.gitkeep
+!templates/corrected/lined_content_page_candidate.png
 templates/config/*
 !templates/config/.gitkeep
+!templates/config/lined_content_page_candidate.json
 
 config/printers/*
 !config/printers/.gitkeep
